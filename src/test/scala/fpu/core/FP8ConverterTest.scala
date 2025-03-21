@@ -27,11 +27,13 @@ class FP8ConverterTest extends AnyFreeSpec with Matchers {
       // 测试E5M2格式转换
       dut.io.in.poke(E5M2_FP8.U)
       dut.io.inType.poke(0.U)
+      dut.clock.step(1)
       dut.io.out.expect(E5M2_FP9.U)
 
       // 测试E4M3格式转换
       dut.io.in.poke(E4M3_FP8.U)
       dut.io.inType.poke(1.U)
+      dut.clock.step(1)
       dut.io.out.expect(E4M3_FP9.U)
 
       //验证两个输出是否相等
