@@ -11,8 +11,7 @@ class Multiplier extends Module {
         val bSign = Input(UInt(1.W))
         val a = Input(UInt(IntermediateFormat.sigWidth.W))
         val b = Input(UInt(IntermediateFormat.sigWidth.W))
-        val out = Output(UInt(FixedPoint.LENGTH.W))
-        val overflow = Output(UInt(1.W))
+        val out = Output(SInt(FixedPoint.LENGTH.W))
     })
 
     val inA = Cat(1.U(1.W), io.a)
@@ -32,12 +31,9 @@ class Multiplier extends Module {
     val outSign = io.aSign ^ io.bSign
 
     val out = Cat(outSign, sum)
-    
-    val overflow = out(7)
+    //printf("out: %b\n", out)
+    //printf("out.asSInt: %b\n", out.asSInt)
 
-    val out_twos_complement = Cat(out(8), ~out(7,0) + 1.U)
-
-    io.out := out_twos_complement
-    io.overflow := overflow
+    io.out := out.asSInt
 }
 

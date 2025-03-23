@@ -31,8 +31,8 @@ object FixedPoint {
   val LENGTH = 9
   val SIGN = 1
   val FRACTION = 8
-  val FIRST_SHIFTED_LENGTH = 15
-  val SHIFTED_LENGTH = 71
+  val FIRST_SHIFTED_LENGTH = 16
+  val SHIFTED_LENGTH = 70
 }
 
 object Parameters {

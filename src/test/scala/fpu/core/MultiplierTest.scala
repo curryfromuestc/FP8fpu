@@ -13,19 +13,19 @@ class MultiplierTest extends AnyFreeSpec with Matchers {
             val b = 7.U(3.W)
             val aSign = 0.U(1.W)
             val bSign = 0.U(1.W)
+            val expected = 225.S(9.W)
             dut.io.aSign.poke(aSign)
             dut.io.bSign.poke(bSign)
             dut.io.a.poke(a)
             dut.io.b.poke(b)
-            
-            dut.io.out.expect(31.U(9.W))
-            dut.io.overflow.expect(1.U(1.W))
+            dut.clock.step(1)
+            dut.io.out.expect(expected)
 
             val a2 = 3.U(3.W)
             val b2 = 3.U(3.W)
             val aSign2 = 1.U(1.W)
             val bSign2 = 0.U(1.W)
-            val expected2 = BigInt("110000111", 2).U(9.W)
+            val expected2 = -135.S(9.W)
             dut.io.aSign.poke(aSign2)
             dut.io.bSign.poke(bSign2)
             dut.io.a.poke(a2)
@@ -33,7 +33,6 @@ class MultiplierTest extends AnyFreeSpec with Matchers {
             dut.clock.step(1)
         
             dut.io.out.expect(expected2)
-            dut.io.overflow.expect(0.U(1.W))
         }
     }
 }
