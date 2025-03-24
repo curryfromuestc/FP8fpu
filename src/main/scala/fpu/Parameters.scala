@@ -7,12 +7,7 @@ object Float32 {
   val LENGTH = 32
   val expWidth = 8
   val sigWidth = 23
-}
-
-object Float8E5M2 {
-  val LENGTH = 8
-  val expWidth = 5
-  val sigWidth = 2
+  val SHIFTED_LENGTH = 64
 }
 
 object Float8E4M3 {
@@ -21,18 +16,12 @@ object Float8E4M3 {
   val sigWidth = 3
 }
 
-object IntermediateFormat {
-  val LENGTH = 9
-  val expWidth = 5
-  val sigWidth = 3
-}
-
 object FixedPoint {
   val LENGTH = 9
   val SIGN = 1
   val FRACTION = 8
   val FIRST_SHIFTED_LENGTH = 16
-  val SHIFTED_LENGTH = 70
+  val SHIFTED_LENGTH = 42
 }
 
 object Parameters {

@@ -9,15 +9,15 @@ class Multiplier extends Module {
     val io = IO(new Bundle {
         val aSign = Input(UInt(1.W))
         val bSign = Input(UInt(1.W))
-        val a = Input(UInt(IntermediateFormat.sigWidth.W))
-        val b = Input(UInt(IntermediateFormat.sigWidth.W))
+        val a = Input(UInt(Float8E4M3.sigWidth.W))
+        val b = Input(UInt(Float8E4M3.sigWidth.W))
         val out = Output(SInt(FixedPoint.LENGTH.W))
     })
 
     val inA = Cat(1.U(1.W), io.a)
     val inB = Cat(1.U(1.W), io.b)
 
-    val partialProducts = Seq.tabulate(IntermediateFormat.sigWidth + 1) { i =>
+    val partialProducts = Seq.tabulate(Float8E4M3.sigWidth + 1) { i =>
         val shiftedA = inA << i
         Mux(inB(i), shiftedA, 0.U)
     }

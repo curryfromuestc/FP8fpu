@@ -7,14 +7,14 @@ import fpu._
 class RightShifter extends Module {
   val io = IO(new Bundle {
     val inProduct = Input(SInt(FixedPoint.LENGTH.W))
-    val inExp = Input(SInt(6.W))
+    val inExp = Input(SInt(5.W))
     val out = Output(SInt(FixedPoint.SHIFTED_LENGTH.W))
   })
 
   val exp = Wire(SInt(8.W))
   exp := io.inExp
   val shiftAmount = Wire(SInt(8.W))
-  shiftAmount := 35.S - exp
+  shiftAmount := 21.S - exp
   printf("shiftAmount: %d\n", shiftAmount)
   val lowShiftAmount = Wire(UInt(3.W))
   lowShiftAmount := shiftAmount(2,0)
@@ -32,7 +32,7 @@ class RightShifter extends Module {
   shiftReg := firstShifted >> lowShiftAmount.asUInt
   printf("shiftReg: %b\n", shiftReg)
   val secondShifted = Wire(SInt(FixedPoint.SHIFTED_LENGTH.W))
-  secondShifted := Cat(shiftReg(15),shiftReg(12,0), Fill(56,0.U)).asSInt
+  secondShifted := Cat(shiftReg(15),shiftReg(12,0), Fill(28,0.U)).asSInt
   io.out := secondShifted >> (highShiftAmount.asUInt << 3)
   printf("io.out: %b\n", io.out)
 }
