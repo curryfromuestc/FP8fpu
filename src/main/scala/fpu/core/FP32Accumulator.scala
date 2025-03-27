@@ -38,10 +38,10 @@ class FP32Accumulator extends Module {
   val scaleAnchor = (21.U - io.scale).asSInt
 
   val exp = accumulator(30, 23)
-  val mant = accumulator(22, 0).asUInt.asSInt(23.W)
+  val mant = Cat(accumulator(31),1.U(1.W), accumulator(22, 0)).asSInt
 
   //对scaleAnchor-exp取绝对值
-  val shiftAmount = scaleAnchor - exp
+  val shiftAmount = scaleAnchor - exp.asSInt
 
 
   val shiftAmountReg = RegInit(0.U(9.W))
