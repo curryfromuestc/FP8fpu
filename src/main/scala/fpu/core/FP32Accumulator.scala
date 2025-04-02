@@ -9,46 +9,52 @@ class FP32Accumulator extends Module {
   val io = IO(new Bundle {
     // 输入接口
     val input = Input(UInt(Float32.LENGTH.W))     // 输入的FP32数据
-    val valid = Input(Bool())                     // 输入有效信号
     val clear = Input(Bool())                     // 清零累加器信号
-    val scale = Input(UInt(7.W))                  // 缩放因子
+    val scale = Input(SInt(7.W))                  // 缩放因子
     
     // 输出接口
-    val result = Output(UInt(Float32.SHIFTED_LENGTH.W))   // 当前累加结果
-    val ready = Output(Bool())                    // 累加器就绪信号
+    val result = Output(SInt(Float32.SHIFTED_LENGTH.W))   // 当前累加结果
   })
 
   // 累加器状态
   val accumulator = RegInit(0.U(Float32.LENGTH.W))  // 累加器初始值为0
 
-  when(io.valid) {
-    accumulator := io.input
-  }
-  .otherwise {
-    accumulator := accumulator
-  }
-
   when(io.clear) {
     accumulator := 0.U
   }
   .otherwise {
-    accumulator := accumulator
+    accumulator := io.input
   }
 
-  val scaleAnchor = (21.U - io.scale).asSInt
+  val scaleAnchor = (21.S - io.scale).asSInt
 
-  val exp = accumulator(30, 23)
-  val mant = Cat(accumulator(31),1.U(1.W), accumulator(22, 0)).asSInt
+  val exp = accumulator(30, 23) - 127.U
+  val mant = Cat(accumulator(31),Fill(4,accumulator(31)),1.U(1.W), accumulator(22, 0),Fill(25,0.U)).asSInt
 
   //对scaleAnchor-exp取绝对值
-  val shiftAmount = scaleAnchor - exp.asSInt
+  val shiftAmount = Wire(SInt(9.W))
+  shiftAmount := scaleAnchor - exp.asSInt 
 
+  val shiftDirection = Wire(UInt(1.W))
+  shiftDirection := shiftAmount(8)
+  val shiftAmountAbs = shiftAmount.abs.asUInt
 
-  val shiftAmountReg = RegInit(0.U(9.W))
-  shiftAmountReg := shiftAmount
+  val shiftedMant = RegInit(0.S(Float32.SHIFTED_LENGTH.W))
+  when(shiftDirection === 1.U) {
+    shiftedMant := mant << shiftAmountAbs
+  }
+  .otherwise {
+    shiftedMant := mant >> shiftAmountAbs
+  }
 
-  val shiftDirection = shiftAmountReg(8)
-  val shiftAmountAbs = shiftAmountReg.abs
+  io.result := shiftedMant
 
-  
+  //测试点
+  // printf("accumulator: %b\n", accumulator)
+  // printf("exp: %b\n", exp)
+  // printf("shiftAmount: %b\n", shiftAmount)
+  // printf("shiftDirection: %b\n", shiftDirection)
+  // printf("shiftAmountAbs: %b\n", shiftAmountAbs)
+  // printf("shiftedMant: %b\n", shiftedMant)
+  // printf("io.result: %b\n", io.result)
 }   

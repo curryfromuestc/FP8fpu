@@ -1,84 +1,94 @@
-# FP8 8-Way Dot Product Implementation
+# FP8 浮点运算单元 (FPU)
 
-This project is an implementation of an 8-way dot product unit using FP8 (8-bit floating-point) format, based on the paper "Fused FP8 4-Way Dot Product With Scaling and FP32 Accumulation". The implementation extends the original 4-way dot product to an 8-way version using Chisel hardware description language.
+这是一个基于 Chisel 实现的 FP8 浮点运算单元，支持 8 个 FP8 数的并行乘加运算。
 
-## Overview
-
-This implementation provides a hardware-efficient solution for performing 8-way dot product operations using FP8 format, which is particularly useful for deep learning applications where memory bandwidth and computational efficiency are crucial. The design supports both E5M2 and E4M3 FP8 formats and accumulates results in FP32 format.
-
-## Features
-
-- Support for two FP8 formats:
-  - E5M2 (5-bit exponent, 2-bit significand)
-  - E4M3 (4-bit exponent, 3-bit significand)
-- 8-way parallel dot product computation
-- FP32 accumulation for improved numerical stability
-- Configurable scaling factors
-- Hardware-efficient implementation using Chisel
-
-## Architecture
-
-The implementation consists of several key components:
-
-1. **FP8 Converter**: Converts between different FP8 formats (E5M2 and E4M3) and an intermediate format for processing
-2. **Dot Product Unit**: Performs 8-way parallel multiplication and addition
-3. **Scaling Unit**: Applies configurable scaling factors to the results
-4. **Accumulator**: Accumulates results in FP32 format for improved numerical stability
-
-## Project Structure
+## 项目结构
 
 ```
-src/
-├── main/
-│   └── scala/
-│       └── fpu/
-│           ├── core/
-│           │   └── FP8Converter.scala
-│           └── Parameters.scala
-└── test/
-    └── scala/
-        └── fpu/
-            └── core/
-                └── FP8ConverterTest.scala
+src/main/scala/fpu/
+├── core/                    # 核心模块
+│   ├── Fpu.scala           # 主 FPU 模块
+│   ├── FP32Accumulator.scala # FP32 累加器
+│   ├── Multiplier.scala    # FP8 乘法器
+│   ├── FiveBitsAdder.scala # 5位加法器
+│   ├── RightShifter.scala  # 右移器
+│   ├── NormalizationShifter.scala # 规格化移位器
+│   └── Reduction.scala     # 归约模块
+├── Parameters.scala        # 全局参数定义
+└── Float32.scala          # FP32 相关定义
 ```
 
-## Dependencies
+## 功能特性
 
-- Chisel 6.6
-- Scala 2.12.x or later
-- Mill (Scala Build Tool)
+- 支持 8 个 FP8 数的并行乘加运算
+- 支持 FP32 累加器
+- 支持动态缩放因子
+- 流水线化设计
+- 支持规格化和舍入
 
-## Building and Testing
+## 数据格式
 
-This project uses Mill as the build tool. To build and test the project:
+### FP8 格式
+- 1 位符号位
+- 4 位指数位
+- 3 位尾数位
 
-To build the project:
-```bash
-mill compile
-```
+### FP32 格式
+- 1 位符号位
+- 8 位指数位
+- 23 位尾数位
 
-To run tests:
-```bash
-mill test
-```
+## 主要模块说明
 
-To generate Verilog:
-```bash
-mill fpu.runMain fpu.FP8DotProduct
-```
+### Fpu
+主模块，实现 8 个 FP8 数的并行乘加运算。包含以下处理阶段：
+1. FP8 乘法运算
+2. 指数对齐
+3. 多级归约（8→4→2→1）
+4. FP32 累加
+5. 结果规格化
 
-## Usage
+### FP32Accumulator
+实现 FP32 累加器，支持动态缩放和清零功能。
 
-The implementation can be used in hardware designs where efficient FP8 dot product computation is required. The design is particularly suitable for:
+### Multiplier
+实现 FP8 乘法运算，处理符号位和尾数乘法。
 
-- Deep learning accelerators
-- Matrix multiplication units
-- Neural network inference engines
+### FiveBitsAdder
+实现 5 位加法器，用于指数计算。
 
-## License
+### RightShifter
+实现右移操作，用于指数对齐。
 
-[Add your license information here]
+### NormalizationShifter
+实现规格化移位，处理舍入。
 
-## Acknowledgments
+### Reduction
+实现多级归约，将多个输入归约为单个输出。
 
-This implementation is based on the paper "Fused FP8 4-Way Dot Product With Scaling and FP32 Accumulation" and extends it to support 8-way dot product operations.
+## 接口定义
+
+### 输入接口
+- `a`: 8个 FP8 输入
+- `b`: 8个 FP8 输入
+- `scale`: 缩放因子 (SInt<7>)
+- `accIn`: FP32 累加器输入
+- `clear`: 清零信号
+
+### 输出接口
+- `out`: FP32 输出结果
+
+## 使用说明
+
+1. 确保已安装 Chisel 开发环境
+2. 克隆项目到本地
+3. 运行测试：
+   ```bash
+   mill FP8fpu.test.testOnly fpu.core.FpuTest
+   ```
+
+## 注意事项
+
+- 输入数据需要符合 FP8 格式
+- 缩放因子范围为 [-63, 63]
+- 累加器支持动态清零

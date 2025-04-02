@@ -16,8 +16,8 @@ class FiveBitsAdder extends Module {
     aNobias := Cat(0.U(1.W), io.a).asSInt - 7.S
     bNobias := Cat(0.U(1.W), io.b).asSInt - 7.S
 
-    printf("aNobias: %d\n", aNobias)
-    printf("bNobias: %d\n", bNobias)
+    // printf("aNobias: %d\n", aNobias)
+    // printf("bNobias: %d\n", bNobias)
 
     io.out := aNobias + bNobias
 }

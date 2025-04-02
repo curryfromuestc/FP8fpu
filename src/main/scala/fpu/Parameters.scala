@@ -7,7 +7,7 @@ object Float32 {
   val LENGTH = 32
   val expWidth = 8
   val sigWidth = 23
-  val SHIFTED_LENGTH = 64
+  val SHIFTED_LENGTH = 54
 }
 
 object Float8E4M3 {
