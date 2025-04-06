@@ -2,6 +2,7 @@ package fpu.core
 
 import chisel3._
 import chisel3.util._
+import _root_.circt.stage.ChiselStage
 
 class FiveBitsAdder extends Module {
     val io = IO(new Bundle {
@@ -20,5 +21,12 @@ class FiveBitsAdder extends Module {
     // printf("bNobias: %d\n", bNobias)
 
     io.out := aNobias + bNobias
+}
+
+object FiveBitsAdder extends App {
+  ChiselStage.emitSystemVerilogFile(
+    new FiveBitsAdder,
+    firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info"),
+  )
 }
 

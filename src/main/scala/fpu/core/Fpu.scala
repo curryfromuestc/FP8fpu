@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 import fpu.Parameters._
 import fpu._
+import _root_.circt.stage.ChiselStage
 
 class Fpu extends Module {
   val io = IO(new Bundle {
@@ -89,4 +90,13 @@ class Fpu extends Module {
   printf("preNormalization: %b\n", preNormalization)
   printf("length of preNormalization: %d\n", preNormalization.getWidth.U)
   printf("out: %b\n", io.out)
+}
+
+//mill -i FP8fpu.runMain fpu.core.Fpu
+object Fpu extends App {
+  ChiselStage.emitSystemVerilogFile(
+    new Fpu,
+    firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info"),
+    args = Array("--target-dir", "src/main/resources")
+  )
 }
