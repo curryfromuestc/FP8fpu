@@ -340,5 +340,5 @@ project/plugins/project/
 hs_err_pid*
 
 .metals/
-
+.metals/metals.lock.db
 .bloop/
