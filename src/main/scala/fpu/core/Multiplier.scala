@@ -30,7 +30,17 @@ class Multiplier extends Module {
 
     val outSign = io.aSign ^ io.bSign
 
-    val out = Cat(outSign, sum)
+    val rawOut = Cat(outSign, sum)
+    
+    // 补码转换
+    val out = Wire(UInt(9.W))
+    when(rawOut(8)) {
+        out := Cat(rawOut(8), ~rawOut(7,0) + 1.U)
+    }
+    .otherwise {
+        out := rawOut
+    }
+    
     //printf("out: %b\n", out)
     //printf("out.asSInt: %b\n", out.asSInt)
 

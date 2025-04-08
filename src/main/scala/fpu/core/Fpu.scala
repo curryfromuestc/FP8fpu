@@ -27,7 +27,7 @@ class Fpu extends Module {
   val multiplier = Seq.fill(8)(Module(new Multiplier))
   val product = Seq.fill(8)(Wire(SInt(FixedPoint.LENGTH.W)))
   val fiveBitsAdder = Seq.fill(8)(Module(new FiveBitsAdder))
-  val productExp = Seq.fill(8)(Wire(SInt(5.W)))
+  val productExp = Seq.fill(8)(Wire(SInt(6.W)))
   for (i <- 0 until 8) {
     multiplier(i).io.aSign := io.a(i)(7)
     multiplier(i).io.bSign := io.b(i)(7)
@@ -64,8 +64,8 @@ class Fpu extends Module {
   reduction3.io.in(1) := reducedProduct2(1)
   val reducedProduct3 = reduction3.io.out
 
-  val preNormalization = RegInit(0.S((Float32.SHIFTED_LENGTH+1).W))
-  val alignedProduct = Cat(Fill(5,reducedProduct3(0)(41)),reducedProduct3(0),Fill(7,0.U)).asSInt
+  val preNormalization = RegInit(0.S((Float32.SHIFTED_LENGTH).W))
+  val alignedProduct = Cat(Fill(5,reducedProduct3(0)(39)),reducedProduct3(0),Fill(9,0.U)).asSInt
   preNormalization := alignedProduct + shiftedAcc
 
   //规格化
@@ -76,15 +76,35 @@ class Fpu extends Module {
   io.out := normalizedResult
 
   //测试点
-  printf("shiftedProduct(0): %b\n", shiftedProduct(0))
-  printf("shiftedProduct(1): %b\n", shiftedProduct(1))
-  printf("shiftedProduct(2): %b\n", shiftedProduct(2))
-  printf("shiftedProduct(3): %b\n", shiftedProduct(3))
-  printf("shiftedProduct(4): %b\n", shiftedProduct(4))
-  printf("shiftedProduct(5): %b\n", shiftedProduct(5))
-  printf("shiftedProduct(6): %b\n", shiftedProduct(6))
-  printf("shiftedProduct(7): %b\n", shiftedProduct(7))
+  // printf("product(0): %b\n", product(0))
+  // printf("product(1): %b\n", product(1))
+  // printf("product(2): %b\n", product(2))
+  // printf("product(3): %b\n", product(3))
+  // printf("product(4): %b\n", product(4))
+  // printf("product(5): %b\n", product(5))
+  // printf("product(6): %b\n", product(6))
+  // printf("product(7): %b\n", product(7))
+  // printf("productExp(0): %d\n", productExp(0))
+  // printf("productExp(1): %d\n", productExp(1))
+  // printf("productExp(2): %d\n", productExp(2))
+  // printf("productExp(3): %d\n", productExp(3))
+  // printf("productExp(4): %d\n", productExp(4))
+  // printf("productExp(5): %d\n", productExp(5))
+  // printf("productExp(6): %d\n", productExp(6))
+  // printf("productExp(7): %d\n", productExp(7))
+  // printf("shiftedProduct(0): %b\n", shiftedProduct(0))
+  // printf("leading zero position of shiftedProduct(0): %d\n", PriorityEncoder(Reverse(shiftedProduct(0).asUInt)))
+  // printf("shiftedProduct(1): %b\n", shiftedProduct(1))
+  // printf("shiftedProduct(2): %b\n", shiftedProduct(2))
+  // printf("shiftedProduct(3): %b\n", shiftedProduct(3))
+  // printf("shiftedProduct(4): %b\n", shiftedProduct(4))
+  // printf("shiftedProduct(5): %b\n", shiftedProduct(5))
+  // printf("shiftedProduct(6): %b\n", shiftedProduct(6))
+  // printf("shiftedProduct(7): %b\n", shiftedProduct(7))
+  // printf("reducedProduct(1): %b\n", reducedProduct(1))
   printf("reducedProduct3  : %b\n", reducedProduct3(0))
+  printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
+  printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)
   printf("lengh of alignedProduct: %d\n", alignedProduct.getWidth.U)
   printf("shiftedAcc: %b\n", shiftedAcc)
   printf("preNormalization: %b\n", preNormalization)

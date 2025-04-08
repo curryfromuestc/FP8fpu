@@ -9,19 +9,19 @@ import fpu.Float32.SHIFTED_LENGTH
 
 class NormalizationShifter extends Module {
     val io = IO(new Bundle {
-        val in = Input(SInt((Float32.SHIFTED_LENGTH + 1).W))
+        val in = Input(SInt((Float32.SHIFTED_LENGTH).W))
         val out = Output(UInt((Float32.LENGTH).W))
         val scale = Input(SInt(7.W))
     })
 
     val in = io.in
-    val preShift = Wire(UInt((Float32.SHIFTED_LENGTH).W))
+    val preShift = Wire(UInt((Float32.SHIFTED_LENGTH-1).W))
 
     //对计算结果进行规格化，首先除符号位以外，其他位取反加一
     val sign = RegInit(0.U(1.W))
-    sign := in(SHIFTED_LENGTH)
-    val mant = in(SHIFTED_LENGTH-1, 0)
-    when(in(SHIFTED_LENGTH) === 1.U) {
+    sign := in(SHIFTED_LENGTH-1)
+    val mant = in(SHIFTED_LENGTH-2, 0)
+    when(in(SHIFTED_LENGTH-1) === 1.U) {
         preShift := ~mant + 1.U
     }
     .otherwise {
@@ -42,7 +42,7 @@ class NormalizationShifter extends Module {
         shiftAmount := numLeadingZero - 4.U
         shiftDirection := 0.U
     }
-    shiftedMant := (preShift << numLeadingZero)(52,29)
+    shiftedMant := (preShift << numLeadingZero)(51,28)
     //第五周期，RNE舍入
     val signNext = RegInit(0.U(1.W))
     signNext := sign
