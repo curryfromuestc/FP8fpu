@@ -11,7 +11,7 @@ import chisel3.simulator.EphemeralSimulator._
 class NormalizationShifterTest extends AnyFreeSpec with Matchers {
     "NormalizationShifter should shift the input data correctly" in {
         simulate(new NormalizationShifter) { dut =>
-            dut.io.in.poke(BigInt("1111110001000100010001000111000011101001111100000000000",2).S)
+            dut.io.in.poke(BigInt("111110000011101101110111100000001101001100000000000000",2).S)
             dut.io.scale.poke(2.S)
             dut.clock.step(3)
             // print("test1----------------------------------\n")

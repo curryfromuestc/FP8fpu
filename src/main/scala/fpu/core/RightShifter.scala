@@ -7,14 +7,14 @@ import fpu._
 class RightShifter extends Module {
   val io = IO(new Bundle {
     val inProduct = Input(SInt(FixedPoint.LENGTH.W))
-    val inExp = Input(SInt(5.W))
+    val inExp = Input(SInt(6.W))
     val out = Output(SInt(FixedPoint.SHIFTED_LENGTH.W))
   })
 
-  val exp = Wire(SInt(8.W))
+  val exp = Wire(SInt(6.W))
   exp := io.inExp
-  val shiftAmount = Wire(SInt(8.W))
-  shiftAmount := 21.S - exp
+  val shiftAmount = Wire(UInt(6.W))
+  shiftAmount := (21.S - exp.asSInt).asUInt
   val lowShiftAmount = Wire(UInt(3.W))
   lowShiftAmount := shiftAmount(2,0)
   val highShiftAmount = Wire(UInt(3.W))
@@ -27,12 +27,15 @@ class RightShifter extends Module {
   //第一周期移位
   shiftReg := firstShifted >> lowShiftAmount.asUInt
   val secondShifted = Wire(SInt(FixedPoint.SHIFTED_LENGTH.W))
-  secondShifted := Cat(shiftReg(15),shiftReg(12,0), Fill(28,0.U)).asSInt
+  secondShifted := Cat(shiftReg(15),shiftReg(12,0), Fill(26,0.U)).asSInt
   io.out := secondShifted >> (highShiftAmount.asUInt << 3)
-  //printf("shiftAmount: %d\n", shiftAmount)
-  //printf("lowShiftAmount: %d\n", lowShiftAmount)
-  //printf("highShiftAmount: %d\n", highShiftAmount)
-  //printf("io.inProduct: %b\n", io.inProduct.asSInt)
-  //printf("io.inExp: %d\n", io.inExp)
-  //printf("io.out: %b\n", io.out)
+
+
+  // printf("exp: %d\n", exp)
+  // printf("shiftAmount: %d\n", shiftAmount)
+  // printf("lowShiftAmount: %d\n", lowShiftAmount)
+  // printf("highShiftAmount: %d\n", highShiftAmount)
+  // printf("io.inProduct: %b\n", io.inProduct.asSInt)
+  // printf("io.inExp: %d\n", io.inExp)
+  // printf("io.out: %b\n", io.out)
 }
