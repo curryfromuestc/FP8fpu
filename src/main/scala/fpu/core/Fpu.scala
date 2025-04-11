@@ -10,18 +10,11 @@ class Fpu extends Module {
   val io = IO(new Bundle {
     val a = Input(Vec(8, UInt(FP8_LENGTH.W)))
     val b = Input(Vec(8, UInt(FP8_LENGTH.W)))
-    val scale = Input(SInt(7.W))
-    val accIn = Input(UInt(Float32.LENGTH.W))
+    val scale_a = Input(SInt(7.W))
+    val scale_b = Input(SInt(7.W))
     val clear = Input(Bool())
     val out = Output(UInt(Float32.LENGTH.W))
   })
-  //累加器
-  val acc = Module(new FP32Accumulator)
-  acc.io.input := io.accIn
-  acc.io.clear := io.clear
-  acc.io.scale := io.scale
-  val shiftedAcc = Wire(SInt(Float32.SHIFTED_LENGTH.W))
-  shiftedAcc := acc.io.result
 
   //指数相加，尾数相乘
   val multiplier = Seq.fill(8)(Module(new Multiplier))
@@ -64,14 +57,19 @@ class Fpu extends Module {
   reduction3.io.in(1) := reducedProduct2(1)
   val reducedProduct3 = reduction3.io.out
 
-  val preNormalization = RegInit(0.S((Float32.SHIFTED_LENGTH).W))
-  val alignedProduct = Cat(Fill(5,reducedProduct3(0)(39)),reducedProduct3(0),Fill(9,0.U)).asSInt
-  preNormalization := alignedProduct + shiftedAcc
+  val acc = RegInit(0.S(FixedPoint.SHIFTED_LENGTH.W))
+  when(io.clear === 1.U) {
+    acc := 0.S(FixedPoint.SHIFTED_LENGTH.W)
+  }
+  .otherwise {
+    acc := acc + reducedProduct3(0)
+  }
 
   //规格化
   val normalizationShifter = Module(new NormalizationShifter)
-  normalizationShifter.io.in := preNormalization
-  normalizationShifter.io.scale := io.scale
+  normalizationShifter.io.in := acc
+  normalizationShifter.io.scale_a := io.scale_a
+  normalizationShifter.io.scale_b := io.scale_b
   val normalizedResult = normalizationShifter.io.out
   io.out := normalizedResult
 
@@ -103,13 +101,11 @@ class Fpu extends Module {
   // printf("shiftedProduct(7): %b\n", shiftedProduct(7))
   // printf("reducedProduct(1): %b\n", reducedProduct(1))
   printf("reducedProduct3  : %b\n", reducedProduct3(0))
+  printf("acc              : %b\n", acc)
   printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
   printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)
-  printf("lengh of alignedProduct: %d\n", alignedProduct.getWidth.U)
-  printf("shiftedAcc: %b\n", shiftedAcc)
-  printf("preNormalization: %b\n", preNormalization)
-  printf("length of preNormalization: %d\n", preNormalization.getWidth.U)
-  printf("out: %b\n", io.out)
+  printf("outreal: %b\n", io.out)
+  printf("--------------------------------\n")
 }
 
 //mill -i FP8fpu.runMain fpu.core.Fpu

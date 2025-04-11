@@ -99,17 +99,15 @@ class FpuTest extends AnyFreeSpec with Matchers {
             dut.io.b(7).poke("b00100001".U)
             val b7 = print_fp8_binary(dut.io.b(7))
             println(s"b7: $b7")
-            dut.io.accIn.poke("b1_10010100_1000_1000_1000_1000_1000_100".U)
-            val accIn = print_fp32_binary(dut.io.accIn)
-            println(s"accIn: $accIn")
-            val out = (a0*b0 + a1*b1 + a2*b2 + a3*b3 + a4*b4 + a5*b5 + a6*b6 + a7*b7)*0.25 + accIn
+            val out = (a0*b0 + a1*b1 + a2*b2 + a3*b3 + a4*b4 + a5*b5 + a6*b6 + a7*b7)*0.25*0.25
             println(s"out: $out")
             println(s"outbinary: ${fp32_to_binary(out)}")
-            println(s"outreal: ${print_fp32_binary(BigInt("11001010001111100010010001000100", 2).U)}")
-            println(s"fixed point value: ${BigInt("0001100010000000000000000001101001100000", 2).toDouble * pow(2, -18)}")
-            println(s"product: ${a0*b0 + a1*b1 + a2*b2 + a3*b3 + a4*b4 + a5*b5 + a6*b6 + a7*b7}")
+            println(s"fixed point value: ${BigInt("000000001100010000000000000000000101001100000", 2).toDouble * pow(2, -18)}")
+            println(s"product: ${(a0*b0 + a1*b1 + a2*b2 + a3*b3 + a4*b4 + a5*b5 + a6*b6 + a7*b7)}")
+            println(s"outreal: ${print_fp32_binary(BigInt("01000111010001000000000000000000", 2).U)}")
             dut.io.clear.poke(false.B)
-            dut.io.scale.poke(2.S)
+            dut.io.scale_a.poke(2.S)
+            dut.io.scale_b.poke(2.S)
             dut.clock.step(6)
         }
     }
