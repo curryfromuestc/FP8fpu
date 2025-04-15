@@ -52,16 +52,16 @@ class NormalizationShifter extends Module {
     }
     io.out := Cat(signNext, expNext, roundedMant)
     //----------------------测试点--------------------------------
-    printf("scale         : %d\n", scale)
-    printf("in            : %b\n", in)
-    printf("sign          : %b\n", sign)
-    printf("mant          : %b\n", mant)
-    printf("preShift      : %b\n", preShift)
-    printf("numLeadingZero: %b\n", numLeadingZero)
-    printf("shiftedMant   : %b\n", shiftedMant)
-    printf("signNext      : %b\n", signNext)
-    printf("roundedMant   : %b\n", roundedMant)
-    printf("exp           : %b\n", exp)
-    printf("out           : %b\n", io.out)
+    // printf("scale         : %d\n", scale)
+    // printf("in            : %b\n", in)
+    // printf("sign          : %b\n", sign)
+    // printf("mant          : %b\n", mant)
+    // printf("preShift      : %b\n", preShift)
+    // printf("numLeadingZero: %b\n", numLeadingZero)
+    // printf("shiftedMant   : %b\n", shiftedMant)
+    // printf("signNext      : %b\n", signNext)
+    // printf("roundedMant   : %b\n", roundedMant)
+    // printf("exp           : %b\n", exp)
+    // printf("out           : %b\n", io.out)
     //----------------------------------------------------------
 }

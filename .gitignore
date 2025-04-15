@@ -342,3 +342,7 @@ hs_err_pid*
 .metals/
 .metals/metals.lock.db
 .bloop/
+
+# Verilator
+obj_dir/
+*.fst

@@ -1,88 +1,168 @@
-#include <cuda_fp8.h>
-#include <cuda_bf16.h>
-#include <cuda_runtime.h>
-#include <iostream>
+#include <iostream>                                           // 标准输入输出流
+#include <cutlass/cutlass.h>                       // 引入cutlass头文件
+#include <cutlass/numeric_types.h>                 // For FP8 types
+#include <cutlass/gemm/device/gemm.h>              // For GEMM operation
+#include <cutlass/gemm/device/gemm_universal.h>    // For universal GEMM
+#include <cutlass/gemm/device/gemm_universal_adapter.h>
+#include <cuda_runtime.h>                          // For CUDA runtime API
 
-#define CHECK_CUDA_ERROR(val) check((val), #val, __FILE__, __LINE__)
-template <typename T>
-void check(T result, char const *const func, const char *const file, int const line) {
-    if (result) {
-        fprintf(stderr, "CUDA error at %s:%d code=%d \"%s\" \n", file, line,
-                static_cast<unsigned int>(result), func);
-        exit(EXIT_FAILURE);
-    }
-}
+using ElementA = cutlass::float_e4m3_t;
+using ElementB = cutlass::float_e4m3_t;
+using ElementOutput = cutlass::float_e4m3_t;
+using ElementAccumulator = float;
 
-// 使用CUDA 12.8的FP8 Tensor Core API
-__global__ void fp8_tensorcore_matmul(const __nv_fp8_e4m3* A, const __nv_fp8_e4m3* B, __nv_fp8_e4m3* C) {
-    // 每个线程块处理整个8x8矩阵
-    int row = threadIdx.y;
-    int col = threadIdx.x;
-    
-    float sum = 0.0f;
-    
-    for (int k = 0; k < 8; ++k) {
-        // 使用CUDA 12.8的FP8转换函数
-        float a = __half2float(__nv_cvt_fp8_to_halfraw(*reinterpret_cast<const __nv_fp8_storage_t*>(&A[row * 8 + k]), __NV_E4M3));
-        float b = __half2float(__nv_cvt_fp8_to_halfraw(*reinterpret_cast<const __nv_fp8_storage_t*>(&B[k * 8 + col]), __NV_E4M3));
-        sum += a * b;
+// Define the GEMM operation using Tensor Core
+using Gemm = cutlass::gemm::device::GemmUniversalAdapter<
+    cutlass::gemm::device::GemmUniversal<
+        ElementA, cutlass::layout::RowMajor,
+        ElementB, cutlass::layout::RowMajor,
+        ElementOutput, cutlass::layout::RowMajor,
+        ElementAccumulator,
+        cutlass::arch::OpClassTensorOp,  // Use Tensor Core
+        cutlass::arch::Sm89,            // Ampere architecture
+        cutlass::gemm::GemmShape<128, 128, 32>,  // Tile size optimized for FP8
+        cutlass::gemm::GemmShape<64, 64, 32>,    // Threadblock tile size
+        cutlass::gemm::GemmShape<16, 8, 32>,     // Warp tile size
+        cutlass::epilogue::thread::LinearCombination<
+            ElementOutput,
+            1,
+            ElementAccumulator,
+            ElementAccumulator
+        >,
+        cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
+        2,
+        cutlass::arch::OpMultiplyAdd
+    >
+>;
+
+void generate_tensor_1D(ElementA *A, int M) {
+    for (int i = 0; i < M; i++) {
+        // Convert random integer to FP8 by creating a proper FP8 value
+        float value = static_cast<float>(rand() % 100) / 100.0f;
+        A[i] = cutlass::float_e4m3_t(value);
     }
-    
-    // 将结果转换回FP8
-    __nv_fp8_storage_t fp8_result = __nv_cvt_halfraw_to_fp8(__float2half(sum), __NV_E4M3, __NV_SATFINITE);
-    C[row * 8 + col] = *reinterpret_cast<__nv_fp8_e4m3*>(&fp8_result);
 }
 
 int main() {
-    const int M = 8, N = 8, K = 8;
+    int M = 128;
+    float scale = 0.25*0.25;
+
+    // Allocate device memory for matrices
+    ElementA *d_A = nullptr;
+    ElementB *d_B = nullptr;
+    ElementOutput *d_C = nullptr;
     
-    // 初始化主机端数据
-    __nv_fp8_e4m3 A_host[M*K], B_host[K*N], C_host[M*N];
+    cudaError_t cuda_status;
     
-    // 填充测试数据
-    for (int i = 0; i < M*K; ++i) {
-        float val = (i % 3) * 0.5f;
-        __nv_fp8_storage_t fp8_val = __nv_cvt_halfraw_to_fp8(__float2half(val), __NV_E4M3, __NV_SATFINITE);
-        A_host[i] = *reinterpret_cast<__nv_fp8_e4m3*>(&fp8_val);
+    // Allocate device memory
+    cuda_status = cudaMalloc(&d_A, M * M * sizeof(ElementA));
+    if (cuda_status != cudaSuccess) {
+        std::cerr << "Failed to allocate device memory for A: " << cudaGetErrorString(cuda_status) << std::endl;
+        return -1;
     }
     
-    for (int i = 0; i < K*N; ++i) {
-        float val = (i % 5) * 0.3f;
-        __nv_fp8_storage_t fp8_val = __nv_cvt_halfraw_to_fp8(__float2half(val), __NV_E4M3, __NV_SATFINITE);
-        B_host[i] = *reinterpret_cast<__nv_fp8_e4m3*>(&fp8_val);
+    cuda_status = cudaMalloc(&d_B, M * M * sizeof(ElementB));
+    if (cuda_status != cudaSuccess) {
+        std::cerr << "Failed to allocate device memory for B: " << cudaGetErrorString(cuda_status) << std::endl;
+        cudaFree(d_A);
+        return -1;
     }
     
-    // 分配设备内存
-    __nv_fp8_e4m3 *A_dev, *B_dev, *C_dev;
-    CHECK_CUDA_ERROR(cudaMalloc(&A_dev, M*K*sizeof(__nv_fp8_e4m3)));
-    CHECK_CUDA_ERROR(cudaMalloc(&B_dev, K*N*sizeof(__nv_fp8_e4m3)));
-    CHECK_CUDA_ERROR(cudaMalloc(&C_dev, M*N*sizeof(__nv_fp8_e4m3)));
-    
-    // 拷贝数据到设备
-    CHECK_CUDA_ERROR(cudaMemcpy(A_dev, A_host, M*K*sizeof(__nv_fp8_e4m3), cudaMemcpyHostToDevice));
-    CHECK_CUDA_ERROR(cudaMemcpy(B_dev, B_host, K*N*sizeof(__nv_fp8_e4m3), cudaMemcpyHostToDevice));
-    
-    // 启动核函数 - 使用8x8线程块
-    dim3 block(8, 8);
-    fp8_tensorcore_matmul<<<1, block>>>(A_dev, B_dev, C_dev);
-    
-    // 拷贝结果回主机
-    CHECK_CUDA_ERROR(cudaMemcpy(C_host, C_dev, M*N*sizeof(__nv_fp8_e4m3), cudaMemcpyDeviceToHost));
-    
-    // 打印结果
-    std::cout << "FP8 8x8 Matrix Multiplication Result:\n";
-    for (int i = 0; i < M; ++i) {
-        for (int j = 0; j < N; ++j) {
-            float val = __half2float(__nv_cvt_fp8_to_halfraw(*reinterpret_cast<const __nv_fp8_storage_t*>(&C_host[i*N + j]), __NV_E4M3));
-            printf("%.2f ", val);
-        }
-        printf("\n");
+    cuda_status = cudaMalloc(&d_C, M * M * sizeof(ElementOutput));
+    if (cuda_status != cudaSuccess) {
+        std::cerr << "Failed to allocate device memory for C: " << cudaGetErrorString(cuda_status) << std::endl;
+        cudaFree(d_A);
+        cudaFree(d_B);
+        return -1;
     }
+
+    // Allocate and initialize host memory
+    ElementA *h_A = (ElementA *)malloc(M * M * sizeof(ElementA));
+    ElementB *h_B = (ElementB *)malloc(M * M * sizeof(ElementB));
+    ElementOutput *h_C = (ElementOutput *)malloc(M * M * sizeof(ElementOutput));
     
-    // 释放设备内存
-    CHECK_CUDA_ERROR(cudaFree(A_dev));
-    CHECK_CUDA_ERROR(cudaFree(B_dev));
-    CHECK_CUDA_ERROR(cudaFree(C_dev));
+    if (!h_A || !h_B || !h_C) {
+        std::cerr << "Failed to allocate host memory" << std::endl;
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+        free(h_A);
+        free(h_B);
+        free(h_C);
+        return -1;
+    }
+
+    // Initialize host matrices
+    generate_tensor_1D(h_A, M * M);
+    generate_tensor_1D(h_B, M * M);
+
+    // Copy data to device
+    cuda_status = cudaMemcpy(d_A, h_A, M * M * sizeof(ElementA), cudaMemcpyHostToDevice);
+    if (cuda_status != cudaSuccess) {
+        std::cerr << "Failed to copy A to device: " << cudaGetErrorString(cuda_status) << std::endl;
+        goto cleanup;
+    }
+
+    cuda_status = cudaMemcpy(d_B, h_B, M * M * sizeof(ElementB), cudaMemcpyHostToDevice);
+    if (cuda_status != cudaSuccess) {
+        std::cerr << "Failed to copy B to device: " << cudaGetErrorString(cuda_status) << std::endl;
+        goto cleanup;
+    }
+
+    // Initialize the GEMM operation
+    Gemm gemm_op;
     
+    // Set up the GEMM arguments
+    typename Gemm::Arguments args(
+        {M, M, M},  // problem size
+        {d_A, M},   // A matrix
+        {d_B, M},   // B matrix
+        {d_C, M},   // C matrix
+        {d_C, M},   // D matrix
+        {scale},    // alpha
+        {scale}     // beta
+    );
+
+    // Initialize the GEMM operation
+    cutlass::Status status = gemm_op.initialize(args);
+    if (status != cutlass::Status::kSuccess) {
+        std::cerr << "Failed to initialize GEMM operation" << std::endl;
+        goto cleanup;
+    }
+
+    // Run the GEMM operation
+    status = gemm_op();
+    if (status != cutlass::Status::kSuccess) {
+        std::cerr << "Failed to run GEMM operation" << std::endl;
+        goto cleanup;
+    }
+
+    // Copy result back to host
+    cuda_status = cudaMemcpy(h_C, d_C, M * M * sizeof(ElementOutput), cudaMemcpyDeviceToHost);
+    if (cuda_status != cudaSuccess) {
+        std::cerr << "Failed to copy result from device: " << cudaGetErrorString(cuda_status) << std::endl;
+        goto cleanup;
+    }
+
+    // Print some results for verification
+    std::cout << "Matrix multiplication completed successfully" << std::endl;
+    std::cout << "First few elements of result matrix:" << std::endl;
+    for (int i = 0; i < 5; i++) {
+        std::cout << static_cast<float>(h_C[i]) << " ";
+    }
+    std::cout << std::endl;
+
+cleanup:
+    // Free device memory
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    
+    // Free host memory
+    free(h_A);
+    free(h_B);
+    free(h_C);
+
     return 0;
 }
+    

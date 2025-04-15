@@ -51,7 +51,7 @@ class Fpu extends Module {
   }
   val reducedProduct2 = reduction2.io.out
 
-  //第三级流水
+  //第二级流水
   val reduction3 = Module(new Reduction(2,1))
   reduction3.io.in(0) := reducedProduct2(0)
   reduction3.io.in(1) := reducedProduct2(1)
@@ -74,15 +74,22 @@ class Fpu extends Module {
   io.out := normalizedResult
 
   //测试点
-  // printf("product(0): %b\n", product(0))
-  // printf("product(1): %b\n", product(1))
-  // printf("product(2): %b\n", product(2))
-  // printf("product(3): %b\n", product(3))
-  // printf("product(4): %b\n", product(4))
-  // printf("product(5): %b\n", product(5))
-  // printf("product(6): %b\n", product(6))
-  // printf("product(7): %b\n", product(7))
-  // printf("productExp(0): %d\n", productExp(0))
+  // printf("input a(0): %b\n", io.a(0))
+  // printf("input a(1): %b\n", io.a(1))
+  // printf("input a(2): %b\n", io.a(2))
+  // printf("input a(3): %b\n", io.a(3))
+  // printf("input a(4): %b\n", io.a(4))
+  // printf("input a(5): %b\n", io.a(5))
+  // printf("input a(6): %b\n", io.a(6))
+  // printf("input a(7): %b\n", io.a(7))
+  // printf("input b(0): %b\n", io.b(0))
+  // printf("input b(1): %b\n", io.b(1))
+  // printf("input b(2): %b\n", io.b(2))
+  // printf("input b(3): %b\n", io.b(3))
+  // printf("input b(4): %b\n", io.b(4))
+  // printf("input b(5): %b\n", io.b(5))
+  // printf("input b(6): %b\n", io.b(6))
+  // printf("input b(7): %b\n", io.b(7))
   // printf("productExp(1): %d\n", productExp(1))
   // printf("productExp(2): %d\n", productExp(2))
   // printf("productExp(3): %d\n", productExp(3))
@@ -100,12 +107,14 @@ class Fpu extends Module {
   // printf("shiftedProduct(6): %b\n", shiftedProduct(6))
   // printf("shiftedProduct(7): %b\n", shiftedProduct(7))
   // printf("reducedProduct(1): %b\n", reducedProduct(1))
-  printf("reducedProduct3  : %b\n", reducedProduct3(0))
-  printf("acc              : %b\n", acc)
-  printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
-  printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)
-  printf("outreal: %b\n", io.out)
-  printf("--------------------------------\n")
+  // printf("reducedProduct3  : %b\n", reducedProduct3(0))
+  // printf("acc              : %b\n", acc)
+  //printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
+  //printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)
+  //printf("outreal: %b\n", io.out)
+  //printf(s"outreal: ${print_fp32_binary(BigInt(io.out, 2).U)}")
+  // 删除对未定义函数的调用
+  //printf("--------------------------------\n")
 }
 
 //mill -i FP8fpu.runMain fpu.core.Fpu
