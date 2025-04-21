@@ -21,7 +21,7 @@ class NormalizationShifter extends Module {
     val preShift = Wire(UInt((FixedPoint.SHIFTED_LENGTH-1).W))
 
     //对计算结果进行规格化，首先除符号位以外，其他位取反加一
-    val sign = RegInit(0.U(1.W))
+    val sign = Wire(UInt(1.W))
     sign := in(FixedPoint.SHIFTED_LENGTH-1)
     val mant = in(FixedPoint.SHIFTED_LENGTH-2, 0)
     when(in(FixedPoint.SHIFTED_LENGTH-1) === 1.U) {
@@ -34,23 +34,19 @@ class NormalizationShifter extends Module {
     val numLeadingZero = Wire(UInt(log2Ceil(FixedPoint.SHIFTED_LENGTH).W))
     numLeadingZero := PriorityEncoder(Reverse(preShift))
     //第三周期，计算出移位量和移位方向
-    val shiftedMant = RegInit(0.U((Float32.sigWidth+1).W))
+    val shiftedMant = Wire(UInt((Float32.sigWidth+1).W))
     shiftedMant := (preShift << numLeadingZero)(FixedPoint.SHIFTED_LENGTH - 3,FixedPoint.SHIFTED_LENGTH - 26)
-    val exp = RegInit(0.U(8.W))
+    val exp = Wire(UInt(8.W))
     exp := (26.S - (numLeadingZero+1.U).asSInt + 127.S - scale).asUInt
     //第四周期，RNE舍入
-    val signNext = RegInit(0.U(1.W))
-    signNext := sign
-    val expNext = RegInit(0.U(8.W))
-    expNext := exp
-    val roundedMant = RegInit(0.U((Float32.sigWidth).W))
+    val roundedMant = Wire(UInt((Float32.sigWidth).W))
     when(shiftedMant(0) === 1.U && shiftedMant(1) === 1.U) {
         roundedMant := shiftedMant(23,1) + 1.U
     }
     .otherwise {
         roundedMant := shiftedMant(23,1)
     }
-    io.out := Cat(signNext, expNext, roundedMant)
+    io.out := Cat(sign, exp, roundedMant)
     //----------------------测试点--------------------------------
     // printf("scale         : %d\n", scale)
     // printf("in            : %b\n", in)

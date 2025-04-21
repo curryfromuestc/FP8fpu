@@ -16,19 +16,23 @@ class Fpu extends Module {
     val out = Output(UInt(Float32.LENGTH.W))
   })
 
+
+  val aReg = VecInit(Seq.fill(8)(RegInit(0.U(FP8_LENGTH.W))))
+  val bReg = VecInit(Seq.fill(8)(RegInit(0.U(FP8_LENGTH.W))))
+  
   //指数相加，尾数相乘
   val multiplier = Seq.fill(8)(Module(new Multiplier))
   val product = Seq.fill(8)(Wire(SInt(FixedPoint.LENGTH.W)))
   val fiveBitsAdder = Seq.fill(8)(Module(new FiveBitsAdder))
   val productExp = Seq.fill(8)(Wire(SInt(6.W)))
   for (i <- 0 until 8) {
-    multiplier(i).io.aSign := io.a(i)(7)
-    multiplier(i).io.bSign := io.b(i)(7)
-    multiplier(i).io.a := io.a(i)(2,0)
-    multiplier(i).io.b := io.b(i)(2,0)
+    multiplier(i).io.aSign := aReg(i)(7)
+    multiplier(i).io.bSign := bReg(i)(7)
+    multiplier(i).io.a := aReg(i)(2,0)
+    multiplier(i).io.b := bReg(i)(2,0)
     product(i) := multiplier(i).io.out
-    fiveBitsAdder(i).io.a := io.a(i)(6,3)
-    fiveBitsAdder(i).io.b := io.b(i)(6,3)
+    fiveBitsAdder(i).io.a := aReg(i)(6,3)
+    fiveBitsAdder(i).io.b := bReg(i)(6,3)
     productExp(i) := fiveBitsAdder(i).io.out
   }
   val rightShifter = Seq.fill(8)(Module(new RightShifter))
@@ -64,14 +68,7 @@ class Fpu extends Module {
   .otherwise {
     acc := acc + reducedProduct3(0)
   }
-
-  //规格化
-  val normalizationShifter = Module(new NormalizationShifter)
-  normalizationShifter.io.in := acc
-  normalizationShifter.io.scale_a := io.scale_a
-  normalizationShifter.io.scale_b := io.scale_b
-  val normalizedResult = normalizationShifter.io.out
-  io.out := normalizedResult
+  io.out := acc
 
   //测试点
   // printf("input a(0): %b\n", io.a(0))
