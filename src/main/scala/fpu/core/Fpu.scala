@@ -13,7 +13,7 @@ class Fpu extends Module {
     val scale_a = Input(SInt(7.W))
     val scale_b = Input(SInt(7.W))
     val clear = Input(Bool())
-    val out = Output(UInt(Float32.LENGTH.W))
+    val out = Output(UInt(FixedPoint.SHIFTED_LENGTH.W))
   })
 
 

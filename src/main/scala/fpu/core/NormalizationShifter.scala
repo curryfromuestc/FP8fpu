@@ -46,18 +46,36 @@ class NormalizationShifter extends Module {
     .otherwise {
         roundedMant := shiftedMant(23,1)
     }
-    io.out := Cat(sign, exp, roundedMant)
+    val fp32Accumulator = RegInit(0.U(Float32.LENGTH.W))
+    def fp32Add(a: UInt, b: UInt): UInt = {
+        val aSign = a(31)
+        val bSign = b(31)
+        val aExp = a(30, 23)
+        val bExp = b(30, 23)
+        val aSig = a(22, 0)
+        val bSig = b(22, 0)
+        val diffExp = aExp - bExp
+        val largerSig = if (diffExp > 0) aSig else bSig
+        val smallerSig = if (diffExp > 0) bSig else aSig
+        val largerSigShifted = Cat(largerSig, 0.U(diffExp.W))
+        val smallerSigShifted = Cat(smallerSig, 0.U(diffExp.W))
+        val sumSig = largerSigShifted + smallerSigShifted
+        val sumSigNormalized = sumSig(53, 29)
+        val sumExp = aExp
+        val sumSign = aSign
+        Cat(sumSign, sumExp, sumSigNormalized)
+    }
+    fp32Accumulator := fp32Add(fp32Accumulator, Cat(sign, exp, roundedMant))
     //----------------------测试点--------------------------------
-    // printf("scale         : %d\n", scale)
-    // printf("in            : %b\n", in)
-    // printf("sign          : %b\n", sign)
-    // printf("mant          : %b\n", mant)
-    // printf("preShift      : %b\n", preShift)
-    // printf("numLeadingZero: %b\n", numLeadingZero)
-    // printf("shiftedMant   : %b\n", shiftedMant)
-    // printf("signNext      : %b\n", signNext)
-    // printf("roundedMant   : %b\n", roundedMant)
-    // printf("exp           : %b\n", exp)
-    // printf("out           : %b\n", io.out)
+    printf("scale         : %d\n", scale)
+    printf("in            : %b\n", in)
+    printf("sign          : %b\n", sign)
+    printf("mant          : %b\n", mant)
+    printf("preShift      : %b\n", preShift)
+    printf("numLeadingZero: %b\n", numLeadingZero)
+    printf("shiftedMant   : %b\n", shiftedMant)
+    printf("roundedMant   : %b\n", roundedMant)
+    printf("exp           : %b\n", exp)
+    printf("out           : %b\n", io.out)
     //----------------------------------------------------------
 }
