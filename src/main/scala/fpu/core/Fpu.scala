@@ -10,15 +10,17 @@ class Fpu extends Module {
   val io = IO(new Bundle {
     val a = Input(Vec(8, UInt(FP8_LENGTH.W)))
     val b = Input(Vec(8, UInt(FP8_LENGTH.W)))
-    val scale_a = Input(SInt(7.W))
-    val scale_b = Input(SInt(7.W))
     val clear = Input(Bool())
-    val out = Output(UInt(FixedPoint.SHIFTED_LENGTH.W))
+    val out = Output(SInt(FixedPoint.SHIFTED_LENGTH.W))
   })
 
+  val aReg = RegInit(VecInit(Seq.fill(8)(0.U(FP8_LENGTH.W))))
+  val bReg = RegInit(VecInit(Seq.fill(8)(0.U(FP8_LENGTH.W))))
 
-  val aReg = VecInit(Seq.fill(8)(RegInit(0.U(FP8_LENGTH.W))))
-  val bReg = VecInit(Seq.fill(8)(RegInit(0.U(FP8_LENGTH.W))))
+  for (i <- 0 until 8) {
+    aReg(i) := io.a(i)
+    bReg(i) := io.b(i)
+  }
   
   //指数相加，尾数相乘
   val multiplier = Seq.fill(8)(Module(new Multiplier))
@@ -105,7 +107,7 @@ class Fpu extends Module {
   // printf("shiftedProduct(7): %b\n", shiftedProduct(7))
   // printf("reducedProduct(1): %b\n", reducedProduct(1))
   // printf("reducedProduct3  : %b\n", reducedProduct3(0))
-  // printf("acc              : %b\n", acc)
+  printf("acc              : %b\n", acc)
   //printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
   //printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)
   //printf("outreal: %b\n", io.out)
@@ -115,10 +117,3 @@ class Fpu extends Module {
 }
 
 //mill -i FP8fpu.runMain fpu.core.Fpu
-object Fpu extends App {
-  ChiselStage.emitSystemVerilogFile(
-    new Fpu,
-    firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info"),
-    args = Array("--target-dir", "src/main/resources")
-  )
-}

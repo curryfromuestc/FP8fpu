@@ -11,12 +11,13 @@ class NormalizationShifter extends Module {
     val io = IO(new Bundle {
         val in = Input(SInt((FixedPoint.SHIFTED_LENGTH).W))
         val out = Output(UInt((Float32.LENGTH).W))
-        val scale_a = Input(SInt(7.W))
-        val scale_b = Input(SInt(7.W))
+        val clear = Input(Bool())
+        val scaleA = Input(SInt(7.W))
+        val scaleB = Input(SInt(7.W))
     })
 
     val scale = Wire(SInt(8.W))
-    scale := io.scale_a + io.scale_b
+    scale := io.scaleA + io.scaleB
     val in = io.in
     val preShift = Wire(UInt((FixedPoint.SHIFTED_LENGTH-1).W))
 
@@ -46,36 +47,19 @@ class NormalizationShifter extends Module {
     .otherwise {
         roundedMant := shiftedMant(23,1)
     }
-    val fp32Accumulator = RegInit(0.U(Float32.LENGTH.W))
-    def fp32Add(a: UInt, b: UInt): UInt = {
-        val aSign = a(31)
-        val bSign = b(31)
-        val aExp = a(30, 23)
-        val bExp = b(30, 23)
-        val aSig = a(22, 0)
-        val bSig = b(22, 0)
-        val diffExp = aExp - bExp
-        val largerSig = if (diffExp > 0) aSig else bSig
-        val smallerSig = if (diffExp > 0) bSig else aSig
-        val largerSigShifted = Cat(largerSig, 0.U(diffExp.W))
-        val smallerSigShifted = Cat(smallerSig, 0.U(diffExp.W))
-        val sumSig = largerSigShifted + smallerSigShifted
-        val sumSigNormalized = sumSig(53, 29)
-        val sumExp = aExp
-        val sumSign = aSign
-        Cat(sumSign, sumExp, sumSigNormalized)
-    }
-    fp32Accumulator := fp32Add(fp32Accumulator, Cat(sign, exp, roundedMant))
+    
+    io.out := Cat(sign, exp, roundedMant)
     //----------------------测试点--------------------------------
-    printf("scale         : %d\n", scale)
-    printf("in            : %b\n", in)
-    printf("sign          : %b\n", sign)
-    printf("mant          : %b\n", mant)
-    printf("preShift      : %b\n", preShift)
-    printf("numLeadingZero: %b\n", numLeadingZero)
-    printf("shiftedMant   : %b\n", shiftedMant)
-    printf("roundedMant   : %b\n", roundedMant)
-    printf("exp           : %b\n", exp)
+    // printf("scale         : %d\n", scale)
+    // printf("in            : %b\n", in)
+    // printf("sign          : %b\n", sign)
+    // printf("mant          : %b\n", mant)
+    // printf("preShift      : %b\n", preShift)
+    // printf("numLeadingZero: %b\n", numLeadingZero)
+    // printf("shiftedMant   : %b\n", shiftedMant)
+    // printf("roundedMant   : %b\n", roundedMant)
+    // printf("exp           : %b\n", exp)
+    printf("fp32_out: %b\n", Cat(sign, exp, roundedMant))
     printf("out           : %b\n", io.out)
     //----------------------------------------------------------
 }

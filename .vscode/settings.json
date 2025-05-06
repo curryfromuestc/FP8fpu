@@ -6,5 +6,9 @@
     },
     "files.watcherExclude": {
         "**/target": true
+    },
+    "files.associations": {
+        "iosfwd": "cpp",
+        "ostream": "cpp"
     }
 }

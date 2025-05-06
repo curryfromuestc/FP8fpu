@@ -41,8 +41,8 @@ class Multiplier extends Module {
         out := rawOut
     }
     
-    //printf("out: %b\n", out)
-    //printf("out.asSInt: %b\n", out.asSInt)
+    printf("out: %b\n", out)
+    printf("out.asSInt: %b\n", out.asSInt)
 
     io.out := out.asSInt
 }

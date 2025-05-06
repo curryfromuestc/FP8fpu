@@ -25,6 +25,7 @@ object FixedPoint {
 }
 
 object Parameters {
-  val WAY_SIZE = 4
+  val WAY_SIZE = 8
   val FP8_LENGTH = 8
+  val NUM_SCALE = 2
 }
