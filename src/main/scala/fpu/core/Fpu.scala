@@ -65,7 +65,7 @@ class Fpu extends Module {
 
   val acc = RegInit(0.S(FixedPoint.SHIFTED_LENGTH.W))
   when(io.clear === 1.U) {
-    acc := 0.S(FixedPoint.SHIFTED_LENGTH.W)
+    acc := reducedProduct3(0)
   }
   .otherwise {
     acc := acc + reducedProduct3(0)
