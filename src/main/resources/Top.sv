@@ -11,9 +11,7 @@
 `endif // not def PRINTF_COND_
 
 module Multiplier(
-  input        clock,
-               reset,
-               io_aSign,
+  input        io_aSign,
                io_bSign,
   input  [2:0] io_a,
                io_b,
@@ -24,16 +22,7 @@ module Multiplier(
     {4'h0, io_b[0] ? {1'h1, io_a} : 4'h0} + {3'h0, io_b[1] ? {1'h1, io_a, 1'h0} : 5'h0}
     + {2'h0, io_b[2] ? {1'h1, io_a, 2'h0} : 6'h0} + {2'h1, io_a, 3'h0};
   wire       outSign = io_aSign ^ io_bSign;
-  wire [8:0] out = {outSign, outSign ? ~_sum_T_4 + 8'h1 : _sum_T_4};
-  `ifndef SYNTHESIS
-    always @(posedge clock) begin
-      if ((`PRINTF_COND_) & ~reset) begin
-        $fwrite(32'h80000002, "out: %b\n", out);
-        $fwrite(32'h80000002, "out.asSInt: %b\n", out);
-      end
-    end // always @(posedge)
-  `endif // not def SYNTHESIS
-  assign io_out = out;
+  assign io_out = {outSign, outSign ? ~_sum_T_4 + 8'h1 : _sum_T_4};
 endmodule
 
 module FiveBitsAdder(
@@ -51,23 +40,22 @@ module RightShifter(
   input         clock,
   input  [8:0]  io_inProduct,
   input  [5:0]  io_inExp,
-  output [44:0] io_out
+  output [36:0] io_out
 );
 
-  reg  [15:0] shiftReg;
-  reg  [2:0]  highShiftAmountReg;
-  wire [46:0] secondShifted =
-    $signed($signed({shiftReg, 31'h0}) >>> {41'h0, highShiftAmountReg, 3'h0});
+  reg [15:0] shiftReg;
+  reg [2:0]  highShiftAmountReg;
   always @(posedge clock) begin
-    automatic logic [5:0] _shiftAmount_T = 6'h1A - io_inExp;
+    automatic logic [5:0] _shiftAmount_T = 6'h10 - io_inExp;
     shiftReg <= $signed($signed({io_inProduct, 7'h0}) >>> _shiftAmount_T[2:0]);
     highShiftAmountReg <= _shiftAmount_T[5:3];
   end // always @(posedge)
-  assign io_out = {secondShifted[46], secondShifted[43:0]};
+  assign io_out =
+    $signed($signed({shiftReg, 21'h0}) >>> {31'h0, highShiftAmountReg, 3'h0});
 endmodule
 
 module Reduction(
-  input  [44:0] io_in_0,
+  input  [36:0] io_in_0,
                 io_in_1,
                 io_in_2,
                 io_in_3,
@@ -75,38 +63,38 @@ module Reduction(
                 io_in_5,
                 io_in_6,
                 io_in_7,
-  output [44:0] io_out_0,
+  output [37:0] io_out_0,
                 io_out_1,
                 io_out_2,
                 io_out_3
 );
 
-  assign io_out_0 = io_in_0 + io_in_1;
-  assign io_out_1 = io_in_2 + io_in_3;
-  assign io_out_2 = io_in_4 + io_in_5;
-  assign io_out_3 = io_in_6 + io_in_7;
+  assign io_out_0 = {io_in_0[36], io_in_0} + {io_in_1[36], io_in_1};
+  assign io_out_1 = {io_in_2[36], io_in_2} + {io_in_3[36], io_in_3};
+  assign io_out_2 = {io_in_4[36], io_in_4} + {io_in_5[36], io_in_5};
+  assign io_out_3 = {io_in_6[36], io_in_6} + {io_in_7[36], io_in_7};
 endmodule
 
 module Reduction_1(
-  input  [44:0] io_in_0,
+  input  [37:0] io_in_0,
                 io_in_1,
                 io_in_2,
                 io_in_3,
-  output [44:0] io_out_0,
+  output [38:0] io_out_0,
                 io_out_1
 );
 
-  assign io_out_0 = io_in_0 + io_in_1;
-  assign io_out_1 = io_in_2 + io_in_3;
+  assign io_out_0 = {io_in_0[37], io_in_0} + {io_in_1[37], io_in_1};
+  assign io_out_1 = {io_in_2[37], io_in_2} + {io_in_3[37], io_in_3};
 endmodule
 
 module Reduction_2(
-  input  [44:0] io_in_0,
+  input  [38:0] io_in_0,
                 io_in_1,
-  output [44:0] io_out_0
+  output [39:0] io_out_0
 );
 
-  assign io_out_0 = io_in_0 + io_in_1;
+  assign io_out_0 = {io_in_0[38], io_in_0} + {io_in_1[38], io_in_1};
 endmodule
 
 module Fpu(
@@ -129,24 +117,24 @@ module Fpu(
                 io_b_6,
                 io_b_7,
   input         io_clear,
-  output [44:0] io_out
+  output [43:0] io_out
 );
 
-  wire [44:0] _reduction3_io_out_0;
-  wire [44:0] _reduction2_io_out_0;
-  wire [44:0] _reduction2_io_out_1;
-  wire [44:0] _reduction_io_out_0;
-  wire [44:0] _reduction_io_out_1;
-  wire [44:0] _reduction_io_out_2;
-  wire [44:0] _reduction_io_out_3;
-  wire [44:0] _rightShifter_7_io_out;
-  wire [44:0] _rightShifter_6_io_out;
-  wire [44:0] _rightShifter_5_io_out;
-  wire [44:0] _rightShifter_4_io_out;
-  wire [44:0] _rightShifter_3_io_out;
-  wire [44:0] _rightShifter_2_io_out;
-  wire [44:0] _rightShifter_1_io_out;
-  wire [44:0] _rightShifter_0_io_out;
+  wire [39:0] _reduction3_io_out_0;
+  wire [38:0] _reduction2_io_out_0;
+  wire [38:0] _reduction2_io_out_1;
+  wire [37:0] _reduction_io_out_0;
+  wire [37:0] _reduction_io_out_1;
+  wire [37:0] _reduction_io_out_2;
+  wire [37:0] _reduction_io_out_3;
+  wire [36:0] _rightShifter_7_io_out;
+  wire [36:0] _rightShifter_6_io_out;
+  wire [36:0] _rightShifter_5_io_out;
+  wire [36:0] _rightShifter_4_io_out;
+  wire [36:0] _rightShifter_3_io_out;
+  wire [36:0] _rightShifter_2_io_out;
+  wire [36:0] _rightShifter_1_io_out;
+  wire [36:0] _rightShifter_0_io_out;
   wire [5:0]  _fiveBitsAdder_7_io_out;
   wire [5:0]  _fiveBitsAdder_6_io_out;
   wire [5:0]  _fiveBitsAdder_5_io_out;
@@ -179,11 +167,14 @@ module Fpu(
   reg  [7:0]  bReg_5;
   reg  [7:0]  bReg_6;
   reg  [7:0]  bReg_7;
-  reg  [44:0] acc;
+  reg  [43:0] acc;
   `ifndef SYNTHESIS
     always @(posedge clock) begin
-      if ((`PRINTF_COND_) & ~reset)
+      if ((`PRINTF_COND_) & ~reset) begin
+        $fwrite(32'h80000002, "reducedProduct(1): %b\n", _reduction_io_out_1);
+        $fwrite(32'h80000002, "reducedProduct3  : %b\n", _reduction3_io_out_0);
         $fwrite(32'h80000002, "acc              : %b\n", acc);
+      end
     end // always @(posedge)
   `endif // not def SYNTHESIS
   always @(posedge clock) begin
@@ -204,7 +195,7 @@ module Fpu(
       bReg_5 <= 8'h0;
       bReg_6 <= 8'h0;
       bReg_7 <= 8'h0;
-      acc <= 45'h0;
+      acc <= 44'h0;
     end
     else begin
       aReg_0 <= io_a_0;
@@ -224,14 +215,12 @@ module Fpu(
       bReg_6 <= io_b_6;
       bReg_7 <= io_b_7;
       if (io_clear)
-        acc <= 45'h0;
+        acc <= {{4{_reduction3_io_out_0[39]}}, _reduction3_io_out_0};
       else
-        acc <= acc + _reduction3_io_out_0;
+        acc <= acc + {{4{_reduction3_io_out_0[39]}}, _reduction3_io_out_0};
     end
   end // always @(posedge)
   Multiplier multiplier_0 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_0[7]),
     .io_bSign (bReg_0[7]),
     .io_a     (aReg_0[2:0]),
@@ -239,8 +228,6 @@ module Fpu(
     .io_out   (_multiplier_0_io_out)
   );
   Multiplier multiplier_1 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_1[7]),
     .io_bSign (bReg_1[7]),
     .io_a     (aReg_1[2:0]),
@@ -248,8 +235,6 @@ module Fpu(
     .io_out   (_multiplier_1_io_out)
   );
   Multiplier multiplier_2 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_2[7]),
     .io_bSign (bReg_2[7]),
     .io_a     (aReg_2[2:0]),
@@ -257,8 +242,6 @@ module Fpu(
     .io_out   (_multiplier_2_io_out)
   );
   Multiplier multiplier_3 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_3[7]),
     .io_bSign (bReg_3[7]),
     .io_a     (aReg_3[2:0]),
@@ -266,8 +249,6 @@ module Fpu(
     .io_out   (_multiplier_3_io_out)
   );
   Multiplier multiplier_4 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_4[7]),
     .io_bSign (bReg_4[7]),
     .io_a     (aReg_4[2:0]),
@@ -275,8 +256,6 @@ module Fpu(
     .io_out   (_multiplier_4_io_out)
   );
   Multiplier multiplier_5 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_5[7]),
     .io_bSign (bReg_5[7]),
     .io_a     (aReg_5[2:0]),
@@ -284,8 +263,6 @@ module Fpu(
     .io_out   (_multiplier_5_io_out)
   );
   Multiplier multiplier_6 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_6[7]),
     .io_bSign (bReg_6[7]),
     .io_a     (aReg_6[2:0]),
@@ -293,8 +270,6 @@ module Fpu(
     .io_out   (_multiplier_6_io_out)
   );
   Multiplier multiplier_7 (
-    .clock    (clock),
-    .reset    (reset),
     .io_aSign (aReg_7[7]),
     .io_bSign (bReg_7[7]),
     .io_a     (aReg_7[2:0]),
@@ -422,18 +397,18 @@ endmodule
 module NormalizationShifter(
   input         clock,
                 reset,
-  input  [44:0] io_in,
+  input  [36:0] io_in,
   output [31:0] io_out,
   input  [6:0]  io_scaleA,
                 io_scaleB
 );
 
-  wire [6:0]   _scale_T = io_scaleA + io_scaleB;
-  wire [43:0]  preShift = io_in[44] ? ~(io_in[43:0]) + 44'h1 : io_in[43:0];
-  wire [7:0]   _GEN =
+  wire [6:0]  _scale_T = io_scaleA + io_scaleB;
+  wire [35:0] preShift = io_in[36] ? ~(io_in[35:0]) + 36'h1 : io_in[35:0];
+  wire [7:0]  _GEN =
     {{preShift[11:8], preShift[15:14]} & 6'h33, 2'h0} | {preShift[15:12], preShift[19:16]}
     & 8'h33;
-  wire [18:0]  _GEN_0 =
+  wire [18:0] _GEN_0 =
     {preShift[5:4],
      preShift[7:6],
      preShift[9:8],
@@ -441,109 +416,93 @@ module NormalizationShifter(
      preShift[19:18],
      preShift[21:20],
      preShift[23]} & 19'h55555;
-  wire [3:0]   _GEN_1 = _GEN_0[18:15] | {preShift[7:6], preShift[9:8]} & 4'h5;
-  wire [7:0]   _GEN_2 = _GEN_0[14:7] | _GEN & 8'h55;
-  wire [3:0]   _GEN_3 = {_GEN_0[2:0], 1'h0} | {preShift[23:22], preShift[25:24]} & 4'h5;
-  wire [5:0]   numLeadingZero =
-    preShift[43]
+  wire [3:0]  _GEN_1 = _GEN_0[18:15] | {preShift[7:6], preShift[9:8]} & 4'h5;
+  wire [7:0]  _GEN_2 = _GEN_0[14:7] | _GEN & 8'h55;
+  wire [3:0]  _GEN_3 = {_GEN_0[2:0], 1'h0} | {preShift[23:22], preShift[25:24]} & 4'h5;
+  wire [5:0]  numLeadingZero =
+    preShift[35]
       ? 6'h0
-      : preShift[42]
+      : preShift[34]
           ? 6'h1
-          : preShift[41]
+          : preShift[33]
               ? 6'h2
-              : preShift[40]
+              : preShift[32]
                   ? 6'h3
-                  : preShift[39]
+                  : preShift[31]
                       ? 6'h4
-                      : preShift[38]
+                      : preShift[30]
                           ? 6'h5
-                          : preShift[37]
+                          : preShift[29]
                               ? 6'h6
-                              : preShift[36]
+                              : preShift[28]
                                   ? 6'h7
-                                  : preShift[35]
+                                  : preShift[27]
                                       ? 6'h8
-                                      : preShift[34]
+                                      : preShift[26]
                                           ? 6'h9
-                                          : preShift[33]
+                                          : preShift[25]
                                               ? 6'hA
-                                              : preShift[32]
+                                              : _GEN_3[0]
                                                   ? 6'hB
-                                                  : preShift[31]
+                                                  : _GEN_3[1]
                                                       ? 6'hC
-                                                      : preShift[30]
+                                                      : _GEN_3[2]
                                                           ? 6'hD
-                                                          : preShift[29]
+                                                          : _GEN_3[3]
                                                               ? 6'hE
-                                                              : preShift[28]
+                                                              : preShift[20]
                                                                   ? 6'hF
-                                                                  : preShift[27]
+                                                                  : preShift[19]
                                                                       ? 6'h10
-                                                                      : preShift[26]
+                                                                      : _GEN_0[5]
+                                                                        | preShift[18]
                                                                           ? 6'h11
-                                                                          : preShift[25]
+                                                                          : _GEN[1]
                                                                               ? 6'h12
-                                                                              : _GEN_3[0]
+                                                                              : _GEN_2[0]
                                                                                   ? 6'h13
-                                                                                  : _GEN_3[1]
+                                                                                  : _GEN_2[1]
                                                                                       ? 6'h14
-                                                                                      : _GEN_3[2]
+                                                                                      : _GEN_2[2]
                                                                                           ? 6'h15
-                                                                                          : _GEN_3[3]
+                                                                                          : _GEN_2[3]
                                                                                               ? 6'h16
-                                                                                              : preShift[20]
+                                                                                              : _GEN_2[4]
                                                                                                   ? 6'h17
-                                                                                                  : preShift[19]
+                                                                                                  : _GEN_2[5]
                                                                                                       ? 6'h18
-                                                                                                      : _GEN_0[5]
-                                                                                                        | preShift[18]
+                                                                                                      : _GEN_2[6]
                                                                                                           ? 6'h19
-                                                                                                          : _GEN[1]
+                                                                                                          : _GEN_2[7]
                                                                                                               ? 6'h1A
-                                                                                                              : _GEN_2[0]
+                                                                                                              : _GEN_1[0]
                                                                                                                   ? 6'h1B
-                                                                                                                  : _GEN_2[1]
+                                                                                                                  : _GEN_1[1]
                                                                                                                       ? 6'h1C
-                                                                                                                      : _GEN_2[2]
+                                                                                                                      : _GEN_1[2]
                                                                                                                           ? 6'h1D
-                                                                                                                          : _GEN_2[3]
+                                                                                                                          : _GEN_1[3]
                                                                                                                               ? 6'h1E
-                                                                                                                              : _GEN_2[4]
+                                                                                                                              : preShift[4]
                                                                                                                                   ? 6'h1F
-                                                                                                                                  : _GEN_2[5]
+                                                                                                                                  : preShift[3]
                                                                                                                                       ? 6'h20
-                                                                                                                                      : _GEN_2[6]
+                                                                                                                                      : preShift[2]
                                                                                                                                           ? 6'h21
-                                                                                                                                          : _GEN_2[7]
-                                                                                                                                              ? 6'h22
-                                                                                                                                              : _GEN_1[0]
-                                                                                                                                                  ? 6'h23
-                                                                                                                                                  : _GEN_1[1]
-                                                                                                                                                      ? 6'h24
-                                                                                                                                                      : _GEN_1[2]
-                                                                                                                                                          ? 6'h25
-                                                                                                                                                          : _GEN_1[3]
-                                                                                                                                                              ? 6'h26
-                                                                                                                                                              : preShift[4]
-                                                                                                                                                                  ? 6'h27
-                                                                                                                                                                  : preShift[3]
-                                                                                                                                                                      ? 6'h28
-                                                                                                                                                                      : preShift[2]
-                                                                                                                                                                          ? 6'h29
-                                                                                                                                                                          : {5'h15,
-                                                                                                                                                                             ~(preShift[1])};
-  wire [106:0] _shiftedMant_T = {63'h0, preShift} << numLeadingZero;
-  wire [5:0]   _exp_T_3 = 6'h1A - (numLeadingZero + 6'h1);
-  wire [7:0]   _exp_T_9 = {{2{_exp_T_3[5]}}, _exp_T_3} + 8'h7F - {_scale_T[6], _scale_T};
-  wire [22:0]  roundedMant =
-    _shiftedMant_T[19] & _shiftedMant_T[20]
-      ? _shiftedMant_T[42:20] + 23'h1
-      : _shiftedMant_T[42:20];
-  wire [31:0]  io_out_0 = {io_in[44], _exp_T_9, roundedMant};
+                                                                                                                                          : {5'h11,
+                                                                                                                                             ~(preShift[1])};
+  wire [98:0] _shiftedMant_T = {63'h0, preShift} << numLeadingZero;
+  wire [5:0]  _exp_T_3 = 6'h1A - (numLeadingZero + 6'h1);
+  wire [7:0]  _exp_T_9 = {{2{_exp_T_3[5]}}, _exp_T_3} + 8'h7F - {_scale_T[6], _scale_T};
+  wire [22:0] roundedMant =
+    _shiftedMant_T[11] & _shiftedMant_T[12]
+      ? _shiftedMant_T[34:12] + 23'h1
+      : _shiftedMant_T[34:12];
+  wire [31:0] io_out_0 = {io_in[36], _exp_T_9, roundedMant};
   `ifndef SYNTHESIS
     always @(posedge clock) begin
       if ((`PRINTF_COND_) & ~reset) begin
-        $fwrite(32'h80000002, "fp32_out: %b\n", {io_in[44], _exp_T_9, roundedMant});
+        $fwrite(32'h80000002, "fp32_out: %b\n", {io_in[36], _exp_T_9, roundedMant});
         $fwrite(32'h80000002, "out           : %b\n", io_out_0);
       end
     end // always @(posedge)
@@ -576,7 +535,7 @@ module Top(
   output [31:0] io_out
 );
 
-  wire [44:0] _fpu_io_out;
+  wire [43:0] _fpu_io_out;
   Fpu fpu (
     .clock    (clock),
     .reset    (reset),
@@ -602,7 +561,7 @@ module Top(
   NormalizationShifter normalizationShifter (
     .clock     (clock),
     .reset     (reset),
-    .io_in     (_fpu_io_out),
+    .io_in     (_fpu_io_out[36:0]),
     .io_out    (io_out),
     .io_scaleA (io_scaleA),
     .io_scaleB (io_scaleB)

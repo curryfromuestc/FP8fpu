@@ -11,7 +11,7 @@ class Fpu extends Module {
     val a = Input(Vec(8, UInt(FP8_LENGTH.W)))
     val b = Input(Vec(8, UInt(FP8_LENGTH.W)))
     val clear = Input(Bool())
-    val out = Output(SInt(FixedPoint.SHIFTED_LENGTH.W))
+    val out = Output(SInt(ACC_LENGTH.W))
   })
 
   val aReg = RegInit(VecInit(Seq.fill(8)(0.U(FP8_LENGTH.W))))
@@ -45,30 +45,30 @@ class Fpu extends Module {
     shiftedProduct(i) := rightShifter(i).io.out
   }
   //8to4 reduction
-  val reduction = Module(new Reduction(8,4))
+  val reduction = Module(new Reduction(8,4,FixedPoint.SHIFTED_LENGTH,REDUCTION8TO4))
   for (i <- 0 until 8) {
     reduction.io.in(i) := shiftedProduct(i)
   }
   val reducedProduct = reduction.io.out
   //4to2 reduction
-  val reduction2 = Module(new Reduction(4,2))
+  val reduction2 = Module(new Reduction(4,2,REDUCTION8TO4,REDUCTION4TO2))
   for (i <- 0 until 4) {
     reduction2.io.in(i) := reducedProduct(i)
   }
   val reducedProduct2 = reduction2.io.out
 
   //第二级流水
-  val reduction3 = Module(new Reduction(2,1))
+  val reduction3 = Module(new Reduction(2,1,REDUCTION4TO2,REDUCTION2TO1))
   reduction3.io.in(0) := reducedProduct2(0)
   reduction3.io.in(1) := reducedProduct2(1)
   val reducedProduct3 = reduction3.io.out
 
-  val acc = RegInit(0.S(FixedPoint.SHIFTED_LENGTH.W))
+  val acc = RegInit(0.S(ACC_LENGTH.W))
   when(io.clear === 1.U) {
-    acc := reducedProduct3(0)
+    acc := Cat(Fill(ACC_LENGTH-REDUCTION2TO1,reducedProduct3(0)(REDUCTION2TO1-1)),reducedProduct3(0)).asSInt
   }
   .otherwise {
-    acc := acc + reducedProduct3(0)
+    acc := acc + Cat(Fill(ACC_LENGTH-REDUCTION2TO1,reducedProduct3(0)(REDUCTION2TO1-1)),reducedProduct3(0)).asSInt
   }
   io.out := acc
 
@@ -105,8 +105,8 @@ class Fpu extends Module {
   // printf("shiftedProduct(5): %b\n", shiftedProduct(5))
   // printf("shiftedProduct(6): %b\n", shiftedProduct(6))
   // printf("shiftedProduct(7): %b\n", shiftedProduct(7))
-  // printf("reducedProduct(1): %b\n", reducedProduct(1))
-  // printf("reducedProduct3  : %b\n", reducedProduct3(0))
+  printf("reducedProduct(1): %b\n", reducedProduct(1))
+  printf("reducedProduct3  : %b\n", reducedProduct3(0))
   printf("acc              : %b\n", acc)
   //printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
   //printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)

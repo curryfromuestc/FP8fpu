@@ -62,7 +62,7 @@ print(b_matrix_float32[1])
 print(a_matrix_float32[0:8])
 print(b_matrix_float32[0:8])
 
-c_float32 = torch.dot(a_matrix_float32[0:256], b_matrix_float32[0:256])
+c_float32 = torch.dot(a_matrix_float32[0:8], b_matrix_float32[0:8])
 print("float32点积结果:", c_float32)
 
 

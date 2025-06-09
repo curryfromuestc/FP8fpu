@@ -14,7 +14,7 @@ class RightShifter extends Module {
   val exp = Wire(SInt(6.W))
   exp := io.inExp
   val shiftAmount = Wire(UInt(6.W))
-  shiftAmount := (26.S - exp.asSInt).asUInt
+  shiftAmount := (Parameters.ANCHOR.S - exp.asSInt).asUInt
   val lowShiftAmount = Wire(UInt(3.W))
   lowShiftAmount := shiftAmount(2,0)
   val highShiftAmount = Wire(UInt(3.W))
@@ -28,11 +28,11 @@ class RightShifter extends Module {
 
   //第一周期移位
   shiftReg := firstShifted >> lowShiftAmount.asUInt
-  val preSecondShifted = Wire(SInt((FixedPoint.SHIFTED_LENGTH+2).W))
-  preSecondShifted := Cat(shiftReg, Fill(31,0.U)).asSInt
-  val secondShifted = Wire(SInt((FixedPoint.SHIFTED_LENGTH+2).W))
+  val preSecondShifted = Wire(SInt((FixedPoint.SHIFTED_LENGTH).W))
+  preSecondShifted := Cat(shiftReg, Fill(21,0.U)).asSInt
+  val secondShifted = Wire(SInt((FixedPoint.SHIFTED_LENGTH).W))
   secondShifted := preSecondShifted >> (highShiftAmountReg << 3)
-  io.out := Cat(secondShifted(FixedPoint.SHIFTED_LENGTH+1), secondShifted(FixedPoint.SHIFTED_LENGTH-2,0)).asSInt
+  io.out := secondShifted
 
   // printf("exp: %d\n", exp)
   // printf("shiftAmount: %d\n", shiftAmount)

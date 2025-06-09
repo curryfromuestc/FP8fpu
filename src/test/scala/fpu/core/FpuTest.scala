@@ -55,7 +55,7 @@ class FpuTest extends AnyFreeSpec with Matchers {
         simulate(new Fpu) { dut =>
             val a_txt = Source.fromFile("src/test/scala/fpu/core/a.txt").getLines().toArray
             val b_txt = Source.fromFile("src/test/scala/fpu/core/b.txt").getLines().toArray
-            for (i <- 0 until 32){
+            for (i <- 0 until 16){
                 for (j <- 0 until 8){
                     dut.io.a(j).poke(("b" + a_txt(i*8+j)).U)
                     dut.io.b(j).poke(("b" + b_txt(i*8+j)).U)
@@ -64,7 +64,7 @@ class FpuTest extends AnyFreeSpec with Matchers {
                 dut.clock.step(1)
                 println(s"clock step: $i")
             }
-            dut.clock.step(6)
+            dut.clock.step(3)
             
             // dut.io.a(0).poke("b00111111".U)
             // val a0 = print_fp8_binary(dut.io.a(0))
@@ -122,7 +122,7 @@ class FpuTest extends AnyFreeSpec with Matchers {
             // val out = (a0*b0 + a1*b1 + a2*b2 + a3*b3 + a4*b4 + a5*b5 + a6*b6 + a7*b7)*0.25*0.25
             // println(s"out: $out")
             // println(s"outbinary: ${fp32_to_binary(out)}")
-            println(s"fixed point value: ${BigInt("000000001001111011010000000000000000000000000", 2).toDouble * pow(2, -18)}")
+            //println(s"fixed point value: ${BigInt("000000001001111011010000000000000000000000000", 2).toDouble * pow(2, -18)}")
             //println(s"product: ${(a0*b0 + a1*b1 + a2*b2 + a3*b3 + a4*b4 + a5*b5 + a6*b6 + a7*b7)}")
             //println(s"outreal: ${print_fp32_binary(BigInt("11000110110001000000000000000000", 2).U)}")
         }
