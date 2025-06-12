@@ -21,16 +21,15 @@ object FixedPoint {
   val SIGN = 1
   val FRACTION = 8
   val FIRST_SHIFTED_LENGTH = 16
-  val SHIFTED_LENGTH = 37
+  val SHIFTED_LENGTH = 27
 }
 
 object Parameters {
   val WAY_SIZE = 8
   val FP8_LENGTH = 8
   val NUM_SCALE = 2
-  val ANCHOR = 16
-  val REDUCTION8TO4 = 38
-  val REDUCTION4TO2 = 39
-  val REDUCTION2TO1 = 40
-  val ACC_LENGTH = 44
+  val REDUCTION8TO4 = 28
+  val REDUCTION4TO2 = 29
+  val REDUCTION2TO1 = 30
+  val ACC_LENGTH = 34
 }

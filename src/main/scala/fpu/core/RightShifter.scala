@@ -6,39 +6,30 @@ import fpu.Parameters._
 import fpu._
 class RightShifter extends Module {
   val io = IO(new Bundle {
-    val inProduct = Input(SInt(FixedPoint.LENGTH.W))
-    val inExp = Input(SInt(6.W))
-    val out = Output(SInt(FixedPoint.SHIFTED_LENGTH.W))
+    val inProduct = Input(Vec(8,SInt(FixedPoint.LENGTH.W)))
+    val inExp = Input(Vec(8,SInt(6.W)))
+    val outShifted = Output(Vec(8,SInt(FixedPoint.SHIFTED_LENGTH.W)))
+    val outAnchor = Output(SInt(6.W))
   })
 
-  val exp = Wire(SInt(6.W))
-  exp := io.inExp
-  val shiftAmount = Wire(UInt(6.W))
-  shiftAmount := (Parameters.ANCHOR.S - exp.asSInt).asUInt
-  val lowShiftAmount = Wire(UInt(3.W))
-  lowShiftAmount := shiftAmount(2,0)
-  val highShiftAmount = Wire(UInt(3.W))
-  highShiftAmount := shiftAmount(5,3)
+  val exp = Wire(Vec(8,SInt(6.W)))
+  val anchor = Wire(SInt(6.W))
+  val shiftAmount = Wire(Vec(8,UInt(5.W)))
+  val shifted = Wire(Vec(8,SInt(FixedPoint.SHIFTED_LENGTH.W)))
 
-  val shiftReg = Reg(SInt(FixedPoint.FIRST_SHIFTED_LENGTH.W))
-  val highShiftAmountReg = Reg(UInt(3.W))
-  highShiftAmountReg := highShiftAmount
-  val firstShifted = Wire(SInt(FixedPoint.FIRST_SHIFTED_LENGTH.W))
-  firstShifted := Cat(io.inProduct, Fill(7,0.U)).asSInt
+  val firstShifted = Reg(Vec(8,SInt(FixedPoint.FIRST_SHIFTED_LENGTH.W)))
+  val anchorReg = Reg(SInt(6.W))
 
-  //第一周期移位
-  shiftReg := firstShifted >> lowShiftAmount.asUInt
-  val preSecondShifted = Wire(SInt((FixedPoint.SHIFTED_LENGTH).W))
-  preSecondShifted := Cat(shiftReg, Fill(21,0.U)).asSInt
-  val secondShifted = Wire(SInt((FixedPoint.SHIFTED_LENGTH).W))
-  secondShifted := preSecondShifted >> (highShiftAmountReg << 3)
-  io.out := secondShifted
+  anchor := exp.reduce((a,b) => Mux(a > b, a, b))
+  anchorReg := anchor
 
-  // printf("exp: %d\n", exp)
-  // printf("shiftAmount: %d\n", shiftAmount)
-  // printf("lowShiftAmount: %d\n", lowShiftAmount)
-  // printf("highShiftAmount: %d\n", highShiftAmount)
-  // printf("io.inProduct: %b\n", io.inProduct.asSInt)
-  // printf("io.inExp: %d\n", io.inExp)
-  // printf("io.out: %b\n", io.out)
+  for (i <- 0 until 8) {
+    exp(i) := io.inExp(i)
+    shiftAmount(i) := (anchor - exp(i)).asUInt
+    firstShifted(i) := io.inProduct(i) << shiftAmount(i)(2,0)
+    shifted(i) := (Cat(firstShifted(i), Fill(21,0.U)).asSInt << shiftAmount(i)(4,3))(36,10).asSInt
+  }
+
+  io.outShifted := shifted
+  io.outAnchor := anchorReg
 }

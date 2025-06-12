@@ -12,6 +12,7 @@ class Fpu extends Module {
     val b = Input(Vec(8, UInt(FP8_LENGTH.W)))
     val clear = Input(Bool())
     val out = Output(SInt(ACC_LENGTH.W))
+    val outAnchor = Output(SInt(6.W))
   })
 
   val aReg = RegInit(VecInit(Seq.fill(8)(0.U(FP8_LENGTH.W))))
@@ -37,12 +38,12 @@ class Fpu extends Module {
     fiveBitsAdder(i).io.b := bReg(i)(6,3)
     productExp(i) := fiveBitsAdder(i).io.out
   }
-  val rightShifter = Seq.fill(8)(Module(new RightShifter))
+  val rightShifter = Module(new RightShifter)
   val shiftedProduct = Seq.fill(8)(Wire(SInt(FixedPoint.SHIFTED_LENGTH.W)))
   for (i <- 0 until 8) {
-    rightShifter(i).io.inProduct := product(i)
-    rightShifter(i).io.inExp := productExp(i)
-    shiftedProduct(i) := rightShifter(i).io.out
+    rightShifter.io.inProduct(i) := product(i)
+    rightShifter.io.inExp(i) := productExp(i)
+    shiftedProduct(i) := rightShifter.io.outShifted(i)
   }
   //8to4 reduction
   val reduction = Module(new Reduction(8,4,FixedPoint.SHIFTED_LENGTH,REDUCTION8TO4))
@@ -56,57 +57,57 @@ class Fpu extends Module {
     reduction2.io.in(i) := reducedProduct(i)
   }
   val reducedProduct2 = reduction2.io.out
-
-  //第二级流水
   val reduction3 = Module(new Reduction(2,1,REDUCTION4TO2,REDUCTION2TO1))
   reduction3.io.in(0) := reducedProduct2(0)
   reduction3.io.in(1) := reducedProduct2(1)
-  val reducedProduct3 = reduction3.io.out
+  val reducedProduct3 = Reg(SInt(REDUCTION2TO1.W))
+  reducedProduct3 := reduction3.io.out(0)
+  val anchor3 = Reg(SInt(6.W))
+  anchor3 := rightShifter.io.outAnchor
 
+  //对比anchor3和anchor4
+  val anchor4 = Reg(SInt(6.W))
   val acc = RegInit(0.S(ACC_LENGTH.W))
-  when(io.clear === 1.U) {
-    acc := Cat(Fill(ACC_LENGTH-REDUCTION2TO1,reducedProduct3(0)(REDUCTION2TO1-1)),reducedProduct3(0)).asSInt
-  }
-  .otherwise {
-    acc := acc + Cat(Fill(ACC_LENGTH-REDUCTION2TO1,reducedProduct3(0)(REDUCTION2TO1-1)),reducedProduct3(0)).asSInt
-  }
-  io.out := acc
 
+  when(io.clear) {
+    val addReducedProduct3 = Cat(Fill(4,reducedProduct3(REDUCTION2TO1-1)),reducedProduct3).asSInt
+    acc := addReducedProduct3
+    anchor4 := anchor3
+  }
+  .elsewhen(anchor4 > anchor3) {
+    val shiftAmountACC = (anchor4 - anchor3).asUInt
+    val addReducedProduct3 = Cat(Fill(4,reducedProduct3(REDUCTION2TO1-1)),reducedProduct3).asSInt
+    acc := acc + (addReducedProduct3 >> shiftAmountACC)(ACC_LENGTH-1,0).asSInt
+    anchor4 := anchor4
+  }
+  .elsewhen(anchor4 < anchor3) {
+    val shiftAmountACC = (anchor3 - anchor4).asUInt
+    val addReducedProduct3 = Cat(Fill(4,reducedProduct3(REDUCTION2TO1-1)),reducedProduct3).asSInt
+    acc := (acc >> shiftAmountACC)(ACC_LENGTH-1,0).asSInt + addReducedProduct3
+    anchor4 := anchor3
+  }
+  .otherwise{
+    val addReducedProduct3 = Cat(Fill(4,reducedProduct3(REDUCTION2TO1-1)),reducedProduct3).asSInt
+    acc := acc + addReducedProduct3
+    anchor4 := anchor4
+  }
+
+  io.out := acc
+  io.outAnchor := anchor4
   //测试点
-  // printf("input a(0): %b\n", io.a(0))
-  // printf("input a(1): %b\n", io.a(1))
-  // printf("input a(2): %b\n", io.a(2))
-  // printf("input a(3): %b\n", io.a(3))
-  // printf("input a(4): %b\n", io.a(4))
-  // printf("input a(5): %b\n", io.a(5))
-  // printf("input a(6): %b\n", io.a(6))
-  // printf("input a(7): %b\n", io.a(7))
-  // printf("input b(0): %b\n", io.b(0))
-  // printf("input b(1): %b\n", io.b(1))
-  // printf("input b(2): %b\n", io.b(2))
-  // printf("input b(3): %b\n", io.b(3))
-  // printf("input b(4): %b\n", io.b(4))
-  // printf("input b(5): %b\n", io.b(5))
-  // printf("input b(6): %b\n", io.b(6))
-  // printf("input b(7): %b\n", io.b(7))
-  // printf("productExp(1): %d\n", productExp(1))
-  // printf("productExp(2): %d\n", productExp(2))
-  // printf("productExp(3): %d\n", productExp(3))
-  // printf("productExp(4): %d\n", productExp(4))
-  // printf("productExp(5): %d\n", productExp(5))
-  // printf("productExp(6): %d\n", productExp(6))
-  // printf("productExp(7): %d\n", productExp(7))
   // printf("shiftedProduct(0): %b\n", shiftedProduct(0))
   // printf("leading zero position of shiftedProduct(0): %d\n", PriorityEncoder(Reverse(shiftedProduct(0).asUInt)))
-  // printf("shiftedProduct(1): %b\n", shiftedProduct(1))
-  // printf("shiftedProduct(2): %b\n", shiftedProduct(2))
-  // printf("shiftedProduct(3): %b\n", shiftedProduct(3))
-  // printf("shiftedProduct(4): %b\n", shiftedProduct(4))
-  // printf("shiftedProduct(5): %b\n", shiftedProduct(5))
-  // printf("shiftedProduct(6): %b\n", shiftedProduct(6))
-  // printf("shiftedProduct(7): %b\n", shiftedProduct(7))
-  printf("reducedProduct(1): %b\n", reducedProduct(1))
-  printf("reducedProduct3  : %b\n", reducedProduct3(0))
+  printf("shiftedProduct(1): %b\n", shiftedProduct(1))
+  printf("shiftedProduct(2): %b\n", shiftedProduct(2))
+  printf("shiftedProduct(3): %b\n", shiftedProduct(3))
+  printf("shiftedProduct(4): %b\n", shiftedProduct(4))
+  printf("shiftedProduct(5): %b\n", shiftedProduct(5))
+  printf("shiftedProduct(6): %b\n", shiftedProduct(6))
+  printf("shiftedProduct(7): %b\n", shiftedProduct(7))
+  printf("outAnchor        : %d\n", rightShifter.io.outAnchor)
+  printf("reducedProduct3  : %b\n", reducedProduct3)
+  printf("anchor3          : %d\n", anchor3)
+  printf("anchor4          : %d\n", anchor4)
   printf("acc              : %b\n", acc)
   //printf("expectedreduction: %b\n", shiftedProduct(0) + shiftedProduct(1)+shiftedProduct(2)+shiftedProduct(3)+shiftedProduct(4)+shiftedProduct(5)+shiftedProduct(6)+shiftedProduct(7))
   //printf("length of reducedProduct3: %d\n", reducedProduct3(0).getWidth.U)
