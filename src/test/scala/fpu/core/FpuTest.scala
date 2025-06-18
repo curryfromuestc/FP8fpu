@@ -62,9 +62,9 @@ class FpuTest extends AnyFreeSpec with Matchers {
                 }
                 dut.io.clear.poke((i == 0).B)  // 第一次计算时清除累加器
                 dut.clock.step(1)
-                println(s"clock step: $i")
+                //println(s"clock step: $i")
             }
-            dut.clock.step(3)
+            dut.clock.step(4)
             
             // dut.io.a(0).poke("b00111111".U)
             // val a0 = print_fp8_binary(dut.io.a(0))
